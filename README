@@ -1,0 +1,13 @@
+This is a very lightweight application meant to break down large images into tile sections parameterized by an exponential zoom, and the corresponding x and y coordinates.
+
+Dependencies:
+build-essentials
+imagemagik
+others... todo
+
+Usage:
+./imgtile {srcimg} {output_directory=./}
+
+TODO:
+parameterize zoom levels, calculate optimal tile size such that deepest zoom level requires no pixel level changes from the original image.
+
