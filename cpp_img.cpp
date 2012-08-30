@@ -91,7 +91,6 @@ void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) 
 	int ypx = y*th;
 	CImg<unsigned char> tile = canvas.get_crop(xpx, ypx, xpx+tw, ypx+th);
 	tile.save_png(save_file);
-	delete &tile;
       }
     }
   }
