@@ -2,6 +2,9 @@
 
 import os, sys, argparse, hashlib, simple_json
 
+import shutil, tempfile, couchdbkit
+from restkit import BasicAuth
+
 """
 Handles processing all images, potentially including by layers (group in tracking dict by deepest common folder)
 """
@@ -45,8 +48,46 @@ class AbstractTiler:
             
     def handleImage(self, meta):
         raise Exception("Not Yet Implemented")
-    def handleTrackingDict(self, dict):
+    def handleTrackingDict(self, dictionary):
         raise Exception("Not Yet Implemented")
+
+#actually need to figure out the schema we desire!!
+class CloudantTiler(AbstractTiler):
+
+    class Meta(couchdbkit.Document):
+        _id = couchdbkit.StringProperty()
+        imagepath = couchdbkit.StringProperty()
+        imagename = couchdbkit.StringProperty()
+
+    def __init__(self, images, args):
+        AbstractTiler.__init__.__call__(self, images, args.layer)
+        self.dest = args.dest #todo: validate server url
+        self.username = args.username
+        self.password = args.password
+                
+        auth = BasicAuth(self.username, self.password)
+        self.server = Server(self.dest, filters = [ auth ])
+        self.db = self.server.get_or_create_db(args.database)
+
+        Meta.set_db(self.db)
+
+    def handleImage(self, meta):
+        document = Meta(_id = meta['hash'], imagepath=meta['imagepath'], imagename=meta['imagename'])
+        if 'layer' in meta:
+            document.layer = meta['layer']
+        if 'index' in meta:
+            document.index = meta['index']
+        
+        output_directory = tempfile.mkdtemp()
+        sys_command = "./imgtile %s %s" % ( meta['imagepath'], output_directory)
+        
+        os.system(sys_command)
+
+        
+        #shutil.rmtree(output_directory)
+        
+    def handleTrackingDict(self, dictionary):
+        pass
 
 class FileTiler(AbstractTiler):
     def __init__(self, images, args):
@@ -94,7 +135,9 @@ def getArgParser():
     parser.add_argument('-d', '--dest', default="./tiles/", help="root destination to output tiles.")
     parser.add_argument('-t', '--type', default="local", help="local | cloudant | openstack")
     parser.add_argument('-l', '--layer', action="store_const", default=False, const=True)
-
+    parser.add_argument('-u', '--username', default=None)
+    parser.add_argument('-p', '--password', default=None)
+    parser.add_argument('-b', '--database', default="test")
     return parser
 
 def getTiler(ttype="local"):
