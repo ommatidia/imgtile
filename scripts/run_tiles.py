@@ -172,7 +172,7 @@ def init():
     images = set(img_from_cli) | set(img_from_file)
     
     if len(images) == 0:
-        print "Filename or explicit files must be specified\n"
+        print "Filename and/or explicit files must be specified\n"
         parser.print_help()
         return
 
