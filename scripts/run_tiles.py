@@ -105,9 +105,9 @@ class FileTiler(AbstractTiler):
             output_directory = os.path.join(output_directory, meta['layer'])
         output_directory = os.path.join(output_directory, meta['hash'])
 
-        sys_command = "./imgtile %s %s" % (meta['imagepath'], output_directory)
+        sys_command = "../imgtile %s %s" % (meta['imagepath'], output_directory)
         print sys_command
-        #os.system(sys_command)
+        os.system(sys_command)
                                             
     def handleTrackingDict(self, dictionary):
         f = open(os.path.join(self.dest, 'metadata.json'), 'w')
