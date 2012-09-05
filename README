@@ -25,3 +25,8 @@ $TILE_HOME=~/path/to/tile_storage
 
 ls -R $ARCH_HOME | ./formatPath.py 1> img_list_to_process.txt 2> /dev/null
 ./run_tiles.py -f img_list_to_process.txt --layer -d $TILE_HOME -t local
+
+If for some reason you need to update a single image later, for instance, if you had to rotate and retile:
+./run_tiles.py $ARCH_HOME/path/to/image -d TILE_HOME --layer -t local
+
+for the moment be careful to backup your dictionary. I will either be adding a --dict option that skips tiling but generates the json metadata as if all had been processed, or read in the existing version and performing a union with the set of images currently being processed.
