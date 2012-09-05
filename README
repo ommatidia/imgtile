@@ -11,3 +11,17 @@ Usage:
 TODO:
 parameterize zoom levels, calculate optimal tile size such that deepest zoom level requires no pixel level changes from the original image.
 
+Scripts:
+========
+
+This can be used with any image or set of images, but the included scripts were originally developed for use with the datasets hosted at archimedespalimpsest.net and digitalgalen.net
+
+As such, once all relevant files have been rsync'd the included scripts can be used to batch process them
+
+Usage:
+
+$ARCH_HOME=~/path/to/archimedes_dataset
+$TILE_HOME=~/path/to/tile_storage
+
+ls -R $ARCH_HOME | ./formatPath.py 1> img_list_to_process.txt 2> /dev/null
+./run_tiles.py -f img_list_to_process.txt --layer -d $TILE_HOME -t local
