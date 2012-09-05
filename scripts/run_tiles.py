@@ -51,6 +51,7 @@ class AbstractTiler:
     def handleTrackingDict(self, dictionary):
         raise Exception("Not Yet Implemented")
 
+"""
 #actually need to figure out the schema we desire!!
 class CloudantTiler(AbstractTiler):
 
@@ -82,12 +83,16 @@ class CloudantTiler(AbstractTiler):
         sys_command = "./imgtile %s %s" % ( meta['imagepath'], output_directory)
         
         os.system(sys_command)
-
+        
+        #post to db
         
         #shutil.rmtree(output_directory)
         
     def handleTrackingDict(self, dictionary):
+        #build json doc
+        #post to db
         pass
+"""
 
 class FileTiler(AbstractTiler):
     def __init__(self, images, args):
