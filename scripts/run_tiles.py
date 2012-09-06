@@ -98,8 +98,12 @@ class FileTiler(AbstractTiler):
     def __init__(self, images, args):
         AbstractTiler.__init__.__call__(self, images, args.layer)
         self.dest = args.dest
+        self.dict = args.dict
         
     def handleImage(self, meta):
+        if self.dict == True:
+            return
+
         output_directory = self.dest
         if 'layer' in meta:
             output_directory = os.path.join(output_directory, meta['layer'])
@@ -110,6 +114,9 @@ class FileTiler(AbstractTiler):
         os.system(sys_command)
                                             
     def handleTrackingDict(self, dictionary):
+        if self.dict == False:
+            return
+
         f = open(os.path.join(self.dest, 'metadata.json'), 'w')
         metadata = simple_json.dumps(dictionary, indent='    ', sort_keys = True)
         f.write("var metadata = ")
@@ -135,14 +142,31 @@ def getArgParser():
     parser = argparse.ArgumentParser(title)
     parser.add_argument('--version', action='version', version='%(prog)s 0.1a')
 
-    parser.add_argument('images', nargs='*', default=None)
-    parser.add_argument('-f', '--filename', help='file containing newline separated paths of images if not explicitly specified.')
-    parser.add_argument('-d', '--dest', default="./tiles/", help="root destination to output tiles.")
-    parser.add_argument('-t', '--type', default="local", help="local | cloudant | openstack")
-    parser.add_argument('-l', '--layer', action="store_const", default=False, const=True)
+    parser.add_argument('images', nargs='*', default=None, \
+                            help='Path to one or more images to tile.')
+    parser.add_argument('-f', '--filename', \
+                            help='Path to file containing newline separated paths of images.')
+    parser.add_argument('-d', '--dest', default="./tiles/", \
+                            help='root destination to output tiles.')
+    parser.add_argument('-l', '--layer', action="store_const", default=False, const=True, \
+                            help='Group images as layers, by immediate containing directory.')
+
+    #TODO: more informative help
+    parser.add_argument('-t', '--type', default="local", \
+                            help='local | openstack')
+
+    #TODO: akamai uploader
     parser.add_argument('-u', '--username', default=None)
     parser.add_argument('-p', '--password', default=None)
-    parser.add_argument('-b', '--database', default="test")
+    #parser.add_argument('-b', '--database', default="test")
+    
+    
+    #specifying neither will do both
+    parser.add_argument('--no-dict', dest='dict', action='store_const', const=False, default=None, \
+                            help='Tile images without outputting any metadata')
+    parser.add_argument('--dict', dest='dict', action='store_const', const=True, default=None, \
+                            help='Calculate and output metadata without processing images')
+    
     return parser
 
 def getTiler(ttype="local"):
