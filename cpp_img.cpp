@@ -12,13 +12,15 @@ using namespace cimg_library;
 #define CHANNELS_PER_PIXEL 3
 #define BLACK 0
 
+#define PATH_BUFFER 512
+
 void slice_and_dice(CImg<unsigned char>*);
 void slice_and_dice(CImg<unsigned char>*, unsigned int, unsigned int);
 int getNativeZoomLevel(CImg<unsigned char>*);
 int getNativeZoomLevel(CImg<unsigned char>*, unsigned int, unsigned int);
 
 int dir_mask = S_IRWXU | S_IRWXG | S_IRWXO;
-char outdir[256];
+char outdir[PATH_BUFFER];
 
 int main(int argc, const char* argv[]) {
   if(argc == 1) {
@@ -26,7 +28,7 @@ int main(int argc, const char* argv[]) {
     return 0;
   }
 
-  char filename[256];
+  char filename[PATH_BUFFER];
   strcpy(filename, argv[1]);
 
   if(argc == 3) {
@@ -36,7 +38,6 @@ int main(int argc, const char* argv[]) {
     strcpy(outdir, ".");
   }
 
-  //TODO: profile heap vs stack, big enough object to probably cause cache misses anyways
   long int start = clock();
   CImg<unsigned char> *image = new CImg<unsigned char>(filename);
   long int end = clock();
@@ -46,7 +47,8 @@ int main(int argc, const char* argv[]) {
   slice_and_dice(image);
   end = clock();
   printf("total tile time %.4f seconds\n", ((double)(end-start))/CLOCKS_PER_SEC);
-  
+
+  delete image;
   return 0;
 }
 
@@ -61,20 +63,16 @@ void slice_and_dice(CImg<unsigned char>* img) {
 }
 
 void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) {
-  std::cout << "Image (" << img->width() << ", " << img->height() << ")\n";
-  std::cout << "Native Zoom Level given resolution: ";
+  printf("Image(%d, %d)\n", img->width(), img->height());
+
   unsigned int nz = getNativeZoomLevel(img);
-  std::cout << nz << "\n";  
+  printf("Native Zoom Level: %d\n", nz);
 
-  int max_w = pow(2, nz) * tw, 
-    max_h = pow(2, nz) * th;
-  float rw = ((float)img->width()/max_w), 
-    rh = ((float)img->height()/max_h);
+  int max_w = pow(2, nz) * tw, max_h = pow(2, nz) * th;
+  float rw = ((float)img->width()/max_w), rh = ((float)img->height()/max_h);
 
-  //CImg<unsigned char> *canvas;
-
-  char path[1000];
-  char save_file[1024];
+  char path[PATH_BUFFER*2];
+  char save_file[PATH_BUFFER*2];
   for(int lvl = 0; lvl < nz; lvl++) {
     sprintf(path, "%s/level_%i", outdir, lvl);
     mkdir(path, dir_mask);
@@ -94,20 +92,15 @@ void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) 
         BYTES_PER_CHANNEL, CHANNELS_PER_PIXEL, BLACK);
     canvas.draw_image(offset_x, offset_y, img->get_resize(sw, sh));
 
-    //canvas = new CImg<unsigned char>(scale_w, scale_h, BYTES_PER_CHANNEL, CHANNELS_PER_PIXEL, BLACK);
-    //canvas->draw_image(offset_x, offset_y, img->get_resize(sw, sh));
-
     for(int x = 0; x < tiles; x++) {
       for(int y = 0; y < tiles; y++) {
 	sprintf(save_file, "%s/%i_%i.png", path, x, y);
 	int xpx = x*tw;
 	int ypx = y*th;
 	CImg<unsigned char> tile = canvas.get_crop(xpx, ypx, xpx+tw, ypx+th);
-	//CImg<unsigned char> tile = canvas->get_crop(xpx, ypx, xpx+tw, ypx+th);
 	tile.save_png(save_file);
       }
     }
-    //delete canvas;
   }
 }
 
