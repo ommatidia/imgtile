@@ -8,16 +8,18 @@
 #include "CImg.h"
 using namespace cimg_library;
 
-#define BYTES_PER_CHANNEL 1
+typedef unsigned char channel;
+
+#define BYTES_PER_CHANNEL sizeof(channel)
 #define CHANNELS_PER_PIXEL 3
 #define BLACK 0
 
 #define PATH_BUFFER 2048
 
-void slice_and_dice(CImg<unsigned char>*);
-void slice_and_dice(CImg<unsigned char>*, unsigned int, unsigned int);
-int getNativeZoomLevel(CImg<unsigned char>*);
-int getNativeZoomLevel(CImg<unsigned char>*, unsigned int, unsigned int);
+void slice_and_dice(CImg<channel>*);
+void slice_and_dice(CImg<channel>*, unsigned int, unsigned int);
+int getNativeZoomLevel(CImg<channel>*);
+int getNativeZoomLevel(CImg<channel>*, unsigned int, unsigned int);
 
 int dir_mask = S_IRWXU | S_IRWXG | S_IRWXO;
 char outdir[PATH_BUFFER];
@@ -39,7 +41,7 @@ int main(int argc, const char* argv[]) {
   }
 
   long int start = clock();
-  CImg<unsigned char> *image = new CImg<unsigned char>(filename);
+  CImg<channel> *image = new CImg<channel>(filename);
   long int end = clock();
   printf("total load time %.4f seconds\n", ((double)(end-start))/CLOCKS_PER_SEC);
 
@@ -52,7 +54,7 @@ int main(int argc, const char* argv[]) {
   return 0;
 }
 
-void slice_and_dice(CImg<unsigned char>* img) {
+void slice_and_dice(CImg<channel>* img) {
   int w = img->width();
   int h = img->height();
   unsigned int nz = getNativeZoomLevel(img);
@@ -62,7 +64,7 @@ void slice_and_dice(CImg<unsigned char>* img) {
   slice_and_dice(img, tw, th);
 }
 
-void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) {
+void slice_and_dice(CImg<channel>* img, unsigned int tw, unsigned int th) {
   printf("Image(%d, %d)\n", img->width(), img->height());
 
   unsigned int nz = getNativeZoomLevel(img);
@@ -88,7 +90,7 @@ void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) 
     int offset_y = (scale_h - sh) / 2;
 
     //resize for zoom level
-    CImg<unsigned char> canvas(scale_w, scale_h, 
+    CImg<channel> canvas(scale_w, scale_h, 
         BYTES_PER_CHANNEL, CHANNELS_PER_PIXEL, BLACK);
     canvas.draw_image(offset_x, offset_y, img->get_resize(sw, sh));
 
@@ -97,18 +99,18 @@ void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) 
 	sprintf(save_file, "%s/%i_%i.png", path, x, y);
 	int xpx = x*tw;
 	int ypx = y*th;
-	CImg<unsigned char> tile = canvas.get_crop(xpx, ypx, xpx+tw, ypx+th);
+	CImg<channel> tile = canvas.get_crop(xpx, ypx, xpx+tw, ypx+th);
 	tile.save_png(save_file);
       }
     }
   }
 }
 
-int getNativeZoomLevel(CImg<unsigned char>* img) {
+int getNativeZoomLevel(CImg<channel>* img) {
   return getNativeZoomLevel(img, 256, 256);
 }
 
-int getNativeZoomLevel(CImg<unsigned char>* img, unsigned int tile_w, unsigned int tile_h) {
+int getNativeZoomLevel(CImg<channel>* img, unsigned int tile_w, unsigned int tile_h) {
   int w = img->width(), h = img->height();
 
   float base2 = log(2.0f);
