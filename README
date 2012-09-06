@@ -3,10 +3,14 @@ This is a very lightweight application meant to break down large images into til
 Dependencies:
 build-essentials
 imagemagik
+cimg
 others... todo
 
 Usage:
 ./imgtile {srcimg} {output_directory=./}
+
+Note:
+If you are working in deep directory structures or with abnormally long file paths/names, you will potentially want to increase PATH_BUFFER to the value of PATH_MAX in linux headers limits.h, generally 4096.
 
 TODO:
 parameterize zoom levels, calculate optimal tile size such that deepest zoom level requires no pixel level changes from the original image.
