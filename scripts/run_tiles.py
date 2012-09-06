@@ -10,9 +10,10 @@ Handles processing all images, potentially including by layers (group in trackin
 """
 class AbstractTiler:
 
-    def __init__(self, src_images, layer_folders=False):
+    def __init__(self, src_images, layer_folders=False, dict_opt=None):
         self.src_images = src_images
         self.layer_folders = layer_folders
+        self.dict = dict_opt
         
     def process(self):
         tracking_dict = {}
@@ -42,9 +43,11 @@ class AbstractTiler:
                 else:
                     tracking_dict = [ meta ]
 
-            self.handleImage(meta)
+            if self.dict != False:
+                self.handleImage(meta)
 
-        self.handleTrackingDict(tracking_dict)
+        if self.dict != True:
+            self.handleTrackingDict(tracking_dict)
             
     def handleImage(self, meta):
         raise Exception("Not Yet Implemented")
@@ -96,14 +99,10 @@ class CloudantTiler(AbstractTiler):
 
 class FileTiler(AbstractTiler):
     def __init__(self, images, args):
-        AbstractTiler.__init__.__call__(self, images, args.layer)
+        AbstractTiler.__init__.__call__(self, images, args.layer, args.dict)
         self.dest = args.dest
-        self.dict = args.dict
         
     def handleImage(self, meta):
-        if self.dict == True:
-            return
-
         output_directory = self.dest
         if 'layer' in meta:
             output_directory = os.path.join(output_directory, meta['layer'])
@@ -114,9 +113,6 @@ class FileTiler(AbstractTiler):
         os.system(sys_command)
                                             
     def handleTrackingDict(self, dictionary):
-        if self.dict == False:
-            return
-
         f = open(os.path.join(self.dest, 'metadata.json'), 'w')
         metadata = simple_json.dumps(dictionary, indent='    ', sort_keys = True)
         f.write("var metadata = ")
