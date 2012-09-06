@@ -12,7 +12,7 @@ using namespace cimg_library;
 #define CHANNELS_PER_PIXEL 3
 #define BLACK 0
 
-#define PATH_BUFFER 512
+#define PATH_BUFFER 2048
 
 void slice_and_dice(CImg<unsigned char>*);
 void slice_and_dice(CImg<unsigned char>*, unsigned int, unsigned int);
@@ -71,8 +71,8 @@ void slice_and_dice(CImg<unsigned char>* img, unsigned int tw, unsigned int th) 
   int max_w = pow(2, nz) * tw, max_h = pow(2, nz) * th;
   float rw = ((float)img->width()/max_w), rh = ((float)img->height()/max_h);
 
-  char path[PATH_BUFFER*2];
-  char save_file[PATH_BUFFER*2];
+  char path[PATH_BUFFER];
+  char save_file[PATH_BUFFER];
   for(int lvl = 0; lvl < nz; lvl++) {
     sprintf(path, "%s/level_%i", outdir, lvl);
     mkdir(path, dir_mask);
