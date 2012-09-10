@@ -48,6 +48,7 @@ class AbstractTiler:
                 self.handleImage(meta)
 
         if self.dict != False:
+            #TODO: ensure directory creation
             self.handleTrackingDict(tracking_dict)
             
     def handleImage(self, meta):
