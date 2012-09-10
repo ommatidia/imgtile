@@ -5,6 +5,8 @@ import os, sys, argparse, hashlib, simple_json
 import shutil, tempfile, couchdbkit
 from restkit import BasicAuth
 
+from pprint import pprint
+
 """
 Handles processing all images, potentially including by layers (group in tracking dict by deepest common folder)
 """
@@ -18,7 +20,6 @@ class AbstractTiler:
     def process(self):
         tracking_dict = {}
         for imagefile in self.src_images:
-            print imagefile + "\n"
             filehash = hashlib.md5(imagefile).hexdigest()
             index = imagefile.rfind('/')            
             imagename = imagefile[index+1:]
@@ -43,10 +44,10 @@ class AbstractTiler:
                 else:
                     tracking_dict = [ meta ]
 
-            if self.dict != False:
+            if self.dict != True:
                 self.handleImage(meta)
 
-        if self.dict != True:
+        if self.dict != False:
             self.handleTrackingDict(tracking_dict)
             
     def handleImage(self, meta):
