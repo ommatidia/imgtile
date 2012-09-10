@@ -54,10 +54,10 @@ def init():
         #TODO: add exceptions to compress, try/except here
         try:
             lzw2_comp.compress(image)
-            sys.out.write(image + "\n")
+            sys.stdout.write(image + "\n")
             #to exclude from rsync updates: cat list.txt | grep -v "^[" > success.txt
         except:
-            sys.err.write(image + "\n")
+            sys.stderr.write(image + "\n")
         i = i + 1
 
     
