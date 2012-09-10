@@ -1,4 +1,4 @@
-B1;3201;0c#!/usr/bin/python
+#!/usr/bin/python
 
 import os, sys, argparse, lzw2_comp
 
