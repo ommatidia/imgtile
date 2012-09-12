@@ -19,7 +19,11 @@ class AbstractTiler:
         
     def process(self):
         tracking_dict = {}
+        i = 1
+        l = len(self.src_images)
         for imagefile in self.src_images:
+            print "[%s:%s]" % (i, l)
+
             filehash = hashlib.md5(imagefile).hexdigest()
             index = imagefile.rfind('/')            
             imagename = imagefile[index+1:]
@@ -56,49 +60,6 @@ class AbstractTiler:
     def handleTrackingDict(self, dictionary):
         raise Exception("Not Yet Implemented")
 
-"""
-#actually need to figure out the schema we desire!!
-class CloudantTiler(AbstractTiler):
-
-    class Meta(couchdbkit.Document):
-        _id = couchdbkit.StringProperty()
-        imagepath = couchdbkit.StringProperty()
-        imagename = couchdbkit.StringProperty()
-
-    def __init__(self, images, args):
-        AbstractTiler.__init__.__call__(self, images, args.layer)
-        self.dest = args.dest #todo: validate server url
-        self.username = args.username
-        self.password = args.password
-                
-        auth = BasicAuth(self.username, self.password)
-        self.server = Server(self.dest, filters = [ auth ])
-        self.db = self.server.get_or_create_db(args.database)
-
-        Meta.set_db(self.db)
-
-    def handleImage(self, meta):
-        document = Meta(_id = meta['hash'], imagepath=meta['imagepath'], imagename=meta['imagename'])
-        if 'layer' in meta:
-            document.layer = meta['layer']
-        if 'index' in meta:
-            document.index = meta['index']
-        
-        output_directory = tempfile.mkdtemp()
-        sys_command = "./imgtile %s %s" % ( meta['imagepath'], output_directory)
-        
-        os.system(sys_command)
-        
-        #post to db
-        
-        #shutil.rmtree(output_directory)
-        
-    def handleTrackingDict(self, dictionary):
-        #build json doc
-        #post to db
-        pass
-"""
-
 class FileTiler(AbstractTiler):
     def __init__(self, images, args):
         AbstractTiler.__init__.__call__(self, images, args.layer, args.dict)
@@ -106,8 +67,6 @@ class FileTiler(AbstractTiler):
         
     def handleImage(self, meta):
         output_directory = self.dest
-        if 'layer' in meta:
-            output_directory = os.path.join(output_directory, meta['layer'])
         output_directory = os.path.join(output_directory, meta['hash'])
 
         sys_command = "../imgtile %s %s" % (meta['imagepath'], output_directory)
