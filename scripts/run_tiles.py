@@ -19,10 +19,13 @@ class AbstractTiler:
         
     def process(self):
         tracking_dict = {}
-        i = 1
+        i = 0
         l = len(self.src_images)
         for imagefile in self.src_images:
-            print "[%s:%s]" % (i, l)
+            i = i+1
+
+            sys.stdout.write("[%s:%s] " % (i, l));
+            sys.stdout.flush();
 
             filehash = hashlib.md5(imagefile).hexdigest()
             index = imagefile.rfind('/')            
@@ -70,7 +73,8 @@ class FileTiler(AbstractTiler):
         output_directory = os.path.join(output_directory, meta['hash'])
 
         sys_command = "../imgtile %s %s" % (meta['imagepath'], output_directory)
-        print sys_command
+        sys.stdout.write(sys_command + "\n");
+        sys.stdout.flush();
         os.system(sys_command)
                                             
     def handleTrackingDict(self, dictionary):
