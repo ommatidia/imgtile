@@ -39,9 +39,6 @@ void tile(uint32*, uint8, uint8, uint8,  uint32, uint32, bool);
 uint32 *resize(const uint32*, uint32, uint32, uint32, uint32);
 void setComponents(const uint32*, uint32, uint8*);
 
-void slice_and_dice(TIFF*);
-void slice_and_dice2(TIFF*, unsigned int, unsigned int);
-
 int dir_mask = S_IRWXU | S_IRWXG | S_IRWXO;
 char outdir[PATH_BUFFER];
 
@@ -81,30 +78,16 @@ int main(int argc, const char* argv[]) {
   raster = (uint32*) _TIFFmalloc(npixels * sizeof(uint32));
   if(raster != NULL) {
     if(TIFFReadRGBAImage(image, w, h, raster, 0)) {
-      //TODO: slice and dice
       printf("loaded data into memory\n");
       bool grayscale = 0;
       if(samples == 1) {
 	grayscale = true;
       }
-      char output[PATH_BUFFER];
-      sprintf(output, "%s/%s", outdir, "test.png");
-
-
-      uint32 *newraster = resize(raster, w, h, 1000, 800);
-
-      //save_crop_raster_to_png(raster, 3000, 2000, 256, 256, w, h, output, grayscale);
-      save_raster_to_png(newraster, 1000, 800, output, grayscale);
-      _TIFFfree(newraster);
+      tile(raster, 5, 226, 170, w, h, grayscale);
     }
     _TIFFfree(raster);
   }
   TIFFClose(image);
-
-  /*start = clock();
-  slice_and_dice(image);
-  end = clock();
-  printf("total tile time %.4f seconds\n", ((double)(end-start))/CLOCKS_PER_SEC);*/
 
   return 0;
 }
@@ -164,9 +147,13 @@ void tile(uint32 *raster, uint8 native_zoom, uint8 tw, uint8 th, uint32 w, uint3
   max_h = tiles * th;
   ratio_w = (((float)w)/max_w);
   ratio_h = (((float)h)/max_h);
+
+  printf("ratios = (%f, %f)\n", ratio_w, ratio_h);
+
+  uint32 i, j;
   
   char path[PATH_BUFFER], save[PATH_BUFFER];
-  for(zoom = 0; zoom < native_zoom; zoom++) {
+  for(zoom = 0; zoom <= native_zoom; zoom++) {
     sprintf(path, "%s/level_%i", outdir, zoom);
     mkdir(path, dir_mask);
 
@@ -174,15 +161,53 @@ void tile(uint32 *raster, uint8 native_zoom, uint8 tw, uint8 th, uint32 w, uint3
     scale_w = tiles * tw;
     scale_h = tiles * th;
     
-    raster_sw = (int)(scale_w * ratio_w);
-    raster_sh = (int)(scale_h * ratio_h);
+    raster_sw = (int)((scale_w * ratio_w) + .5);
+    raster_sh = (int)((scale_h * ratio_h) + .5);
 
     offset_x = (scale_w - raster_sw) / 2;
     offset_y = (scale_h - raster_sh) / 2;
-    //allocate new resized raster
 
+    printf("resizing: (%i, %i) -> (%i, %i), new raster (%i, %i)\n", w, h, scale_w, scale_h, raster_sw, raster_sh);
+    uint32 *scale_raster;
+    if(raster_sw != w || raster_sh != h) {
+      scale_raster = resize(raster, w, h, raster_sw, raster_sh);
+    } else {
+      scale_raster = raster;
+    }
+
+    uint32 *canvas_raster;
+    if(raster_sw != scale_w || raster_sh != scale_h) {
+      printf("Drawing to canvas\n");
+      canvas_raster = _TIFFmalloc(scale_h * scale_w * sizeof(uint32));
+      //TODO: make border black when done debugging
+      memset(canvas_raster, 0x00ffffff, scale_h * scale_w * sizeof(uint32));
+
+      for(j = 0; j < raster_sh; j++) {
+	for(i = 0; i < raster_sw; i++) {
+	  canvas_raster[(j+offset_y)*scale_w+i+offset_x] = scale_raster[j*raster_sw + i];
+	}
+      }
+      
+      if(raster_sw != w || raster_sh != h) {
+	//don't free unresized raster
+	_TIFFfree(scale_raster);
+      }
+
+    } else {
+      canvas_raster = scale_raster;
+    }
+
+    printf("Begin Tiling output\n");
+    for(i = 0; i < tiles; i++) {
+      for(j = 0; j < tiles; j++) {
+	sprintf(save, "%s/%i_%i.png", path, i, j);
+	uint32 xpx = i*tw;
+	uint32 ypx = j*th;
+	save_crop_raster_to_png(canvas_raster, xpx, ypx, tw, th, scale_w, scale_h, save, grayscale);
+      }
+    }
     
-    //_TIFFfree(scale_raster);
+    _TIFFfree(canvas_raster);
   }
 }
 
@@ -222,7 +247,8 @@ uint32* resize(const uint32* raster, uint32 origW, uint32 origH, uint32 newW, ui
       g = (c1_rgb[1]*(1-xoff) + (c2_rgb[1]*xoff))*(1-yoff) + (c3_rgb[1]*(1-xoff) + (c4_rgb[1]*xoff))*yoff;
       b = (c1_rgb[2]*(1-xoff) + (c2_rgb[2]*xoff))*(1-yoff) + (c3_rgb[2]*(1-xoff) + (c4_rgb[2]*xoff))*yoff;
       
-      *(scale_raster + i + j*newW) = r << 16 | g << 8 | b;
+      //printf("r=%i, g=%i, b=%i\n", r, g, b);
+      *(scale_raster + i + j*newW) = ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
       ci += scale_w;
     }
     cj += scale_h;
@@ -235,32 +261,15 @@ uint32* resize(const uint32* raster, uint32 origW, uint32 origH, uint32 newW, ui
 //not safe (offset value)
 void setComponents(const uint32 *raster, uint32 offset, uint8 *components) {
   uint32 *px = raster + offset;
-  components[0] = (uint8)((*px) & 0x00ff0000) >> 16;
-  components[1] = (uint8)((*px) & 0x0000ff00) >> 8;
-  components[2] = (uint8)((*px) & 0x000000ff);
+  //components[0] = (uint8)(((*px) & 0x00ff0000) >> 16);
+  //components[1] = (uint8)(((*px) & 0x0000ff00) >> 8);
+  //components[2] = (uint8)((*px) & 0x000000ff);
+  components[0] = (uint8)(*px & 0xff);
+  components[1] = (uint8)(*px >> 8 & 0xff);
+  components[2] = (uint8)(*px >> 16 & 0xff);
 }
 
-void slice_and_dice2(TIFF *img, unsigned int tw, unsigned int th) {
-  /*
-  for(int lvl = 0; lvl < nz; lvl++) {
-    int tiles = pow(2, lvl);
 
-    //resize for zoom level
-    C_IMG canvas(scale_w, scale_h, 
-        BYTES_PER_CHANNEL, CHANNELS_PER_PIXEL, BLACK);
-    canvas.draw_image(offset_x, offset_y, img->get_resize(sw, sh));
-
-    for(int x = 0; x < tiles; x++) {
-      for(int y = 0; y < tiles; y++) {
-	sprintf(save_file, "%s/%i_%i.png", path, x, y);
-	int xpx = x*tw;
-	int ypx = y*th;
-	C_IMG tile = canvas.get_crop(xpx, ypx, xpx+tw, ypx+th);
-	tile.save_png(save_file);
-      }
-    }
-    }*/
-}
 
 static int save_raster_to_png(const uint32 *raster, uint32 w, uint32 h, const char *path, bool grayscale) {
   return save_crop_raster_to_png(raster, 0, 0, w, h, w, h, path, grayscale);
@@ -268,7 +277,7 @@ static int save_raster_to_png(const uint32 *raster, uint32 w, uint32 h, const ch
 
 static int save_crop_raster_to_png(const uint32 *raster, uint32 sx, uint32 sy, uint32 sw, uint32 sh, 
 				   uint32 w, uint32 h, const char *path, bool grayscale) {
-  int x, y;
+  uint32 x, y;
   FILE * fp;
   png_structp png_ptr = NULL;
   png_infop info_ptr = NULL;
@@ -315,9 +324,9 @@ static int save_crop_raster_to_png(const uint32 *raster, uint32 sx, uint32 sy, u
   /* Initialize rows of PNG. */
   
   row_pointers = png_malloc (png_ptr, sh * sizeof (png_byte *));
-  for (y = sy; y < sh+sy; ++y) {
+  for (y = sy+sh-1; y >= sy; y--) {
     png_byte *row = png_malloc (png_ptr, sizeof (uint8_t) * sw * pixel_size);
-    row_pointers[y-sy] = row;
+    row_pointers[sy+sh-y-1] = row;
     for (x = sx; x < sw+sx; ++x) {
       uint32* pixel = raster+(y*w+x);
       if(grayscale) {
@@ -326,11 +335,12 @@ static int save_crop_raster_to_png(const uint32 *raster, uint32 sx, uint32 sy, u
 	*row++ = temp;
 	*row++ = temp;
       } else {
-	*row++ = (uint8_t)((*pixel) & 0x000000ff) >> 0;
-	*row++ = (uint8_t)((*pixel) & 0x0000ff00) >> 8;
-	*row++ = (uint8_t)((*pixel) & 0x00ff0000) >> 16;
+	*row++ = (uint8_t)(((*pixel) & 0x00ff0000) >> 16);
+	*row++ = (uint8_t)(((*pixel) & 0x0000ff00) >> 8);
+	*row++ = (uint8_t)(((*pixel) & 0x000000ff) >> 0);
       }
     }
+    if(y==0) break; //since unsigned, overflow still greater
   }
   
   /* Write the image data to "fp". */

@@ -1,5 +1,10 @@
-CC=g++
-CFLAGS = -lX11 -pthread -Wall -O3 -lMagick++
+CC=gcc
+CFLAGS = -ltiff -lpng -w -O3
+DFLAGS = -g -Wall -ltiff -lpng -O0
 
-comp: cpp_img.o dirutil.o
-	$(CC) -o imgtile cpp_img.o dirutil.o $(CFLAGS)
+comp: imgtile.o dirutil.o
+	$(CC) -o imgtile imgtile.o dirutil.o $(CFLAGS)
+
+
+debug: imgtile.o dirutil.o
+	$(CC) -o imgtile_dbg imgtile.o dirutil.o $(DFLAGS)
